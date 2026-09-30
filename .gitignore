@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# PDF des assureurs et fichiers générés (reproductibles via les scripts)
+data/contrats/
+data/chunks/
+
+# Cache des embeddings (recalculable)
+data/embeddings_cache.json

@@ -1,0 +1,28 @@
+# Catalogue des contrats analysés : conditions générales PUBLIQUES d'assurance habitation.
+# Les PDF ne sont pas versionnés dans Git (ils appartiennent aux assureurs) :
+#   python -m ingestion.download   -> les télécharge dans data/contrats/
+#
+# Pour ajouter un contrat : ajouter un bloc ci-dessous (id unique en minuscules).
+
+contrats:
+  - id: maif_habitation
+    assureur: MAIF
+    produit: Assurance Habitation
+    url: https://www.maif.fr/maiffr/documents/pdf/documentation-contractuelle/habitation/conditions-generales-assurance-habitation.pdf
+
+  - id: macif_habitation
+    assureur: Macif
+    produit: Macif Habitation
+    version: "06/2025"
+    url: https://www.macif.fr/files/live/sites/maciffr/files/conditions_generales_habitation/CG-Macif-Habitation.pdf
+
+  - id: maaf_tempo_habitation
+    assureur: MAAF
+    produit: Multirisque Tempo Habitation
+    version: "réf. 2339 - 03/26"
+    url: https://www.maaf.fr/fr/files/live/sites/maaf/files/DOCUMENTS/Habitation/CG/MAAF_Conditions_generales_Assurance_Tempo_habitation_2339.pdf
+
+  - id: matmut_habitation_rp
+    assureur: Matmut
+    produit: Habitation Résidence Principale
+    url: https://www.matmut.fr/services-en-ligne/doc/CG/CGMGARRP.pdf

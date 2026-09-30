@@ -1,0 +1,62 @@
+# Jeu d'évaluation : 40 questions (25 classiques, 10 pièges, 5 hors sujet).
+#
+# « attendus » donne, POUR CHAQUE CONTRAT, la bonne réponse vérifiée À LA MAIN
+# dans les conditions générales :
+#   attendus:
+#     macif_habitation: {verdict: sous_conditions, section: "Dégâts des eaux"}
+#     maif_habitation:  {verdict: couvert, section: "Dégâts des eaux"}
+#
+#   verdict : couvert | non_couvert | sous_conditions | information_absente | hors_sujet
+#   section : un morceau du titre de la section qui contient la réponse
+#             (sert à évaluer la RECHERCHE : ce passage est-il dans les 5 premiers ?)
+#
+# Pour t'aider à annoter :  python -m evaluation.annoter --question q01 --contrat macif_habitation
+# La clé spéciale « tous » s'applique à tous les contrats (utilisée pour les questions hors sujet).
+# Les questions sans attendus sont ignorées par l'évaluation (le rapport indique la couverture).
+
+questions:
+  # ---------------- Classiques ----------------
+  - {id: q01, type: classique, question: "Une fuite de ma machine à laver a abîmé le plafond du voisin du dessous : suis-je couvert ?", attendus: {}}
+  - {id: q02, type: classique, question: "Un dégât des eaux venant de l'appartement du dessus a abîmé mon parquet : suis-je indemnisé ?", attendus: {}}
+  - {id: q03, type: classique, question: "Un incendie a démarré dans ma cuisine : mes meubles sont-ils remboursés ?", attendus: {}}
+  - {id: q04, type: classique, question: "Mon appartement a été cambriolé avec la porte d'entrée forcée : le vol est-il couvert ?", attendus: {}}
+  - {id: q05, type: classique, question: "La vitre de ma porte-fenêtre s'est brisée : le bris de glace est-il pris en charge ?", attendus: {}}
+  - {id: q06, type: classique, question: "Une tempête a arraché des tuiles de mon toit : suis-je couvert ?", attendus: {}}
+  - {id: q07, type: classique, question: "La foudre a grillé ma télévision et ma box internet : suis-je indemnisé ?", attendus: {}}
+  - {id: q08, type: classique, question: "Mon logement a été inondé et un arrêté de catastrophe naturelle a été publié : suis-je couvert ?", attendus: {}}
+  - {id: q09, type: classique, question: "Mon fils a cassé la vitre d'un voisin avec un ballon : ma responsabilité civile s'applique-t-elle ?", attendus: {}}
+  - {id: q10, type: classique, question: "Mon chien a mordu un passant dans la rue : suis-je couvert ?", attendus: {}}
+  - {id: q11, type: classique, question: "Après un sinistre, je ne peux plus habiter mon logement : les frais de relogement sont-ils pris en charge ?", attendus: {}}
+  - {id: q12, type: classique, question: "Mon congélateur est tombé en panne après une coupure de courant et les aliments sont perdus : suis-je indemnisé ?", attendus: {}}
+  - {id: q13, type: classique, question: "Des vandales ont dégradé la porte et les murs de mon logement : suis-je couvert ?", attendus: {}}
+  - {id: q14, type: classique, question: "Mon ordinateur portable a été volé dans un café : est-il couvert en dehors du domicile ?", attendus: {}}
+  - {id: q15, type: classique, question: "La grêle a endommagé ma véranda : est-ce garanti ?", attendus: {}}
+  - {id: q16, type: classique, question: "Je suis en litige avec un voisin : ai-je une protection juridique ?", attendus: {}}
+  - {id: q17, type: classique, question: "J'ai perdu les clés de mon appartement : le remplacement des serrures est-il pris en charge ?", attendus: {}}
+  - {id: q18, type: classique, question: "Un invité s'est blessé en tombant dans mon escalier : suis-je couvert ?", attendus: {}}
+  - {id: q19, type: classique, question: "Mon logement est resté inoccupé trois mois et j'ai été cambriolé : suis-je indemnisé ?", attendus: {}}
+  - {id: q20, type: classique, question: "Des bijoux ont été volés chez moi : y a-t-il un plafond d'indemnisation ?", attendus: {}}
+  - {id: q21, type: classique, question: "Mes panneaux solaires ont été endommagés par un orage : sont-ils couverts ?", attendus: {}}
+  - {id: q22, type: classique, question: "Un arbre de mon jardin est tombé sur la voiture de mon voisin : suis-je couvert ?", attendus: {}}
+  - {id: q23, type: classique, question: "Une canalisation fuit dans un mur : les frais de recherche de fuite sont-ils pris en charge ?", attendus: {}}
+  - {id: q24, type: classique, question: "Le gel a fait éclater une canalisation de ma maison : est-ce garanti ?", attendus: {}}
+  - {id: q25, type: classique, question: "Dans quel délai dois-je déclarer un vol à mon assureur ?", attendus: {}}
+
+  # ---------------- Pièges (exclusions, conditions, cas limites) ----------------
+  - {id: q26, type: piege, question: "Une infiltration d'eau par une façade mal entretenue depuis des années a abîmé mes murs : suis-je couvert ?", attendus: {}}
+  - {id: q27, type: piege, question: "Mon vélo a été volé dans le local commun de l'immeuble, qui n'était pas fermé à clé : suis-je couvert ?", attendus: {}}
+  - {id: q28, type: piege, question: "J'ai volontairement mis le feu à un de mes meubles : suis-je indemnisé ?", attendus: {}}
+  - {id: q29, type: piege, question: "J'ai déclaré un dégât des eaux trois semaines après l'avoir découvert : suis-je encore couvert ?", attendus: {}}
+  - {id: q30, type: piege, question: "Des moisissures dues à l'humidité se sont développées dans ma chambre : est-ce garanti ?", attendus: {}}
+  - {id: q31, type: piege, question: "On m'a volé des affaires alors que ma porte n'était pas fermée à clé, sans effraction : suis-je indemnisé ?", attendus: {}}
+  - {id: q32, type: piege, question: "J'ai fait tomber ma télévision chez moi et elle est cassée : est-ce couvert ?", attendus: {}}
+  - {id: q33, type: piege, question: "Mon sinistre s'élève à 100 euros : serai-je remboursé compte tenu de la franchise ?", attendus: {}}
+  - {id: q34, type: piege, question: "Des termites ont endommagé ma charpente : est-ce couvert ?", attendus: {}}
+  - {id: q35, type: piege, question: "Je loue mon appartement en location courte durée et un voyageur a causé des dégâts : suis-je couvert ?", attendus: {}}
+
+  # ---------------- Hors sujet (l'assistant doit refuser) ----------------
+  - {id: q36, type: hors_sujet, question: "Quel est le meilleur restaurant de Bordeaux ?", attendus: {tous: {verdict: hors_sujet}}}
+  - {id: q37, type: hors_sujet, question: "Mon assurance auto couvre-t-elle un accrochage sur l'autoroute ?", attendus: {tous: {verdict: hors_sujet}}}
+  - {id: q38, type: hors_sujet, question: "Écris-moi un poème sur l'océan.", attendus: {tous: {verdict: hors_sujet}}}
+  - {id: q39, type: hors_sujet, question: "Comment investir en bourse avec 1 000 euros ?", attendus: {tous: {verdict: hors_sujet}}}
+  - {id: q40, type: hors_sujet, question: "Quelle est la capitale de l'Australie ?", attendus: {tous: {verdict: hors_sujet}}}

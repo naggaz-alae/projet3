@@ -1,0 +1,47 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16          # PostgreSQL 16 + extension pgvector
+    container_name: suisjecouvert_db
+    environment:
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: rag_password
+      POSTGRES_DB: assurance
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/init:/docker-entrypoint-initdb.d   # schéma créé au premier démarrage
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag -d assurance"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    container_name: suisjecouvert_api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://rag:rag_password@db:5432/assurance
+    volumes:
+      - ./data:/app/data
+      - ./evaluation:/app/evaluation   # questions annotées et rapports visibles sur ta machine
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build: .
+    container_name: suisjecouvert_app
+    command: ["streamlit", "run", "app/Accueil.py", "--server.port", "8501", "--server.address", "0.0.0.0"]
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
