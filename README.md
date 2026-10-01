@@ -1,163 +1,81 @@
-# 🛡️ Suis-je couvert ? — Assistant IA pour contrats d'assurance habitation
+# Suis-je couvert ?
 
-**Une question sur un sinistre → un verdict, les conditions, et l'article exact du contrat.
-Puis la même question comparée sur plusieurs assureurs.**
+Un petit assistant qui répond à une question simple : « est-ce que mon assurance habitation me couvre pour ça ? »
 
-Les conditions générales d'assurance habitation font 60 à 100 pages que personne ne lit.
-Cet assistant **RAG** (Retrieval-Augmented Generation) les lit pour vous, **cite ses sources**
-et **refuse d'inventer** : chaque citation est vérifiée automatiquement dans le contrat.
+Les conditions générales d'assurance font souvent 60 à 100 pages et presque personne ne les lit. L'idée du projet : on pose une question (« mon voisin du dessus a inondé ma salle de bain, je suis couvert ? »), et l'appli va chercher les articles concernés dans le contrat, donne une réponse (couvert, pas couvert, sous conditions…) et montre le passage exact du contrat avec la page. On peut aussi poser la même question sur plusieurs assureurs pour comparer.
 
-🔗 **Démo en ligne : _à ajouter après déploiement_** · 📘 API documentée : `/docs` (Swagger)
+Pour l'instant j'ai intégré les conditions générales habitation de la MAIF, de la Macif, de la MAAF et de la Matmut (liste dans `data/catalogue.yaml`).
 
-> Projet indépendant à visée pédagogique, non affilié aux assureurs cités.
-> Les réponses sont indicatives : seuls le contrat et l'assureur font foi.
+> Projet perso fait dans le cadre de mes études, sans lien avec les assureurs. Les réponses sont indicatives, seul le contrat fait foi.
 
----
+## Comment ça marche
 
-## Ce que fait l'application
+1. Je télécharge les PDF des contrats, j'en extrais le texte et je le découpe article par article (pas par blocs de N caractères, sinon une exclusion se retrouve séparée de la garantie qu'elle concerne).
+2. Chaque morceau est transformé en vecteur avec l'API de Mistral, puis stocké dans PostgreSQL avec l'extension pgvector.
+3. Quand une question arrive, je fais une recherche « hybride » : par le sens (vecteurs) et par mots-clés (recherche plein texte de Postgres), puis je fusionne les deux classements.
+4. Les meilleurs passages sont envoyés à Mistral, qui doit répondre dans un format JSON précis.
+5. Avant d'afficher la réponse, je vérifie que les citations renvoyées existent vraiment dans le contrat. Si le modèle dit « couvert » sans citation valable, la réponse devient « information absente ». Je préfère ne pas répondre plutôt que répondre faux.
 
-| | |
-|---|---|
-| **Verdict** | ✅ Couvert · ❌ Non couvert · ⚠️ Sous conditions · ❓ Information absente · 🚫 Hors sujet |
-| **Conditions** | Franchises, plafonds, délais, options, exclusions |
-| **Citations vérifiées** | Extrait mot pour mot + section + page ; toute citation introuvable est écartée |
-| **Comparaison** | Même question sur 2 à 6 contrats, traités en parallèle, tableau récapitulatif |
-| **Suivi** | Latence (médiane, 95e centile), tokens et coût de chaque requête |
+Il y a aussi quelques garde-fous : les questions hors sujet sont refusées sans appeler le modèle, et les embeddings sont mis en cache pour ne pas payer deux fois.
 
-**Contrats analysés** : conditions générales publiques d'assurance habitation de la MAIF,
-de la Macif, de la MAAF et de la Matmut ([`data/catalogue.yaml`](data/catalogue.yaml)).
+Côté technique : Python, FastAPI pour l'API, Streamlit pour l'interface, PostgreSQL + pgvector, Mistral pour les embeddings et la génération, Docker pour tout lancer.
 
-## Architecture
+## Lancer le projet
 
-```mermaid
-flowchart LR
-    subgraph Préparation
-        PDF[PDF des contrats] --> EX[Extraction page par page<br/>en-têtes retirés]
-        EX --> DEC[Découpage PAR ARTICLE<br/>fil d'Ariane + pages]
-        DEC --> EMB[Embeddings Mistral<br/>+ cache]
-        EMB --> DB[(PostgreSQL<br/>pgvector + plein texte)]
-    end
-    subgraph "À chaque question"
-        Q[Question] --> G1{Garde-fou<br/>d'entrée}
-        G1 --> R[Recherche hybride<br/>sens + mots-clés, RRF]
-        DB --> R
-        R --> LLM[Mistral<br/>JSON imposé]
-        LLM --> V[Vérification<br/>des citations]
-        V --> G2{Garde-fou<br/>de sortie}
-        G2 --> REP[Réponse + sources<br/>+ coût / latence]
-    end
-    REP --> API[FastAPI] --> UI[Streamlit]
-```
-
-## Résultats d'évaluation
-
-Jeu de **40 questions** ([`evaluation/questions.yaml`](evaluation/questions.yaml)) :
-25 classiques, **10 pièges** (exclusions, franchises, défaut d'entretien, absence d'effraction…)
-et 5 hors sujet. Les réponses attendues sont vérifiées à la main dans chaque contrat.
-
-**Recherche seule** (`python -m evaluation.eval_recherche`) :
-
-| Mode | Succès à 1 | Succès à 5 | MRR |
-|---|---|---|---|
-| Mots-clés | _à mesurer_ | _à mesurer_ | _à mesurer_ |
-| Sens (vecteurs) | _à mesurer_ | _à mesurer_ | _à mesurer_ |
-| **Hybride** | _à mesurer_ | _à mesurer_ | _à mesurer_ |
-
-**Assistant complet** (`python -m evaluation.run_eval`) :
-
-| Indicateur | Résultat |
-|---|---|
-| Justesse du verdict | _à mesurer_ |
-| … dont questions pièges | _à mesurer_ |
-| Refus corrects (hors sujet) | _à mesurer_ |
-| Fidélité des citations | _à mesurer_ |
-| Latence médiane / 95e centile | _à mesurer_ |
-| Coût moyen par question | _à mesurer_ |
-
-Les rapports détaillés sont historisés dans [`evaluation/resultats/`](evaluation/resultats/).
-
-## Choix techniques
-
-- **Découpage par article, pas par nombre de caractères.** Une exclusion séparée de sa garantie
-  fait répondre « couvert » à tort. Le découpage reconnaît les numérotations des différents
-  assureurs (« 2.1 », « Article 12 », « TITRE II / Section I »), ignore le sommaire, et garde
-  pour chaque passage son fil d'Ariane et ses pages.
-- **Vectoriser le passage avec son contexte** (assureur + titre de section) : « sont exclus :
-  les infiltrations » n'a de sens que rattaché à la garantie « Dégâts des eaux ».
-- **Recherche hybride dans PostgreSQL.** Les vecteurs (pgvector) comprennent les synonymes
-  (« fuite » ≈ « dégât des eaux »), le plein texte français trouve les termes exacts
-  (« franchise », « vétusté »). Fusion par *Reciprocal Rank Fusion*. Une seule base pour les
-  vecteurs, le texte, les filtres par assureur et le journal des requêtes.
-- **Réponse en JSON validé par Pydantic**, avec une seconde chance si le format est invalide.
-- **Citations vérifiées** : l'identifiant doit correspondre à un passage réellement fourni
-  et l'extrait doit s'y trouver. Un verdict affirmatif sans citation valide devient
-  « information absente » : mieux vaut ne pas répondre que répondre faux.
-- **Économies** : question refusée ou aucun passage assez proche (seuil calibré par
-  l'évaluation) → pas d'appel au LLM ; cache des embeddings pour ne jamais recalculer.
-- **Les PDF ne sont pas versionnés** (ils appartiennent aux assureurs) : un catalogue + un
-  script de téléchargement avec empreinte SHA-256 pour détecter les nouvelles versions.
-
-## Démarrage rapide (Docker)
-
-Prérequis : Docker Desktop et une clé API [Mistral](https://console.mistral.ai).
+Il faut Docker et une clé API Mistral (https://console.mistral.ai).
 
 ```bash
-cp .env.example .env                    # puis renseigner MISTRAL_API_KEY
-docker compose up -d db                 # base PostgreSQL + pgvector
+cp .env.example .env          # mettre sa clé MISTRAL_API_KEY dedans
+docker compose up -d db
 
-# Préparation des contrats (une fois)
+# à faire une seule fois : récupérer et indexer les contrats
 docker compose run --rm api python -m ingestion.download
 docker compose run --rm api python -m ingestion.build_chunks
 docker compose run --rm api python -m ingestion.index
 
-docker compose up -d                    # API + interface
+docker compose up -d
 ```
 
-- Interface : http://localhost:8501
-- API et documentation Swagger : http://localhost:8000/docs
+Ensuite :
+- l'interface : http://localhost:8501
+- l'API (avec la doc Swagger) : http://localhost:8000/docs
 
-Sans Docker pour le code Python : `python -m venv .venv`, `pip install -r requirements.txt`,
-puis les mêmes commandes sans le préfixe `docker compose run --rm api`
-(`uvicorn api.main:app --reload` et `streamlit run app/Accueil.py`).
+Sans Docker, ça marche aussi avec un environnement virtuel : `pip install -r requirements.txt`, puis les mêmes commandes Python, et `uvicorn api.main:app --reload` / `streamlit run app/Accueil.py`. Il faut quand même une base Postgres avec pgvector.
 
-## Évaluer
+## Évaluation
+
+J'ai préparé 40 questions dans `evaluation/questions.yaml` : des questions classiques, des questions pièges (exclusions, franchises, défaut d'entretien…) et quelques questions hors sujet. Les bonnes réponses sont vérifiées à la main dans les PDF.
 
 ```bash
-# 1. Annoter : afficher les passages candidats, vérifier dans le PDF, compléter questions.yaml
-python -m evaluation.annoter --question q01 --contrat macif_habitation
-# 2. Évaluer la recherche seule, puis l'assistant complet
-python -m evaluation.eval_recherche
-python -m evaluation.run_eval
+python -m evaluation.eval_recherche   # qualité de la recherche seule
+python -m evaluation.run_eval         # l'assistant complet (verdicts, citations, coût, temps de réponse)
 ```
 
 ## Tests
 
 ```bash
-pytest -v
+pytest
 ```
 
-Les tests n'appellent ni Mistral ni la base : faux LLM, faux moteur de recherche, PDF générés.
-Ils tournent automatiquement à chaque push (GitHub Actions).
+Les tests n'appellent ni Mistral ni la base de données (j'utilise des faux objets et des PDF générés), donc ils tournent sans clé API. Ils sont aussi lancés automatiquement par GitHub Actions à chaque push.
 
-## Structure
+## Organisation du code
 
 ```
-data/catalogue.yaml     contrats analysés (assureur, produit, lien)
-ingestion/              téléchargement, extraction PDF, découpage, embeddings, indexation
-rag/                    recherche hybride, prompts, génération, citations, garde-fous, suivi
-api/                    API FastAPI (/ask, /compare, /contrats, /stats, /health)
-app/                    interface Streamlit (question, comparaison, suivi)
-evaluation/             40 questions, aide à l'annotation, scripts d'évaluation, rapports
-sql/init/               schéma PostgreSQL + pgvector
-docs/DEPLOIEMENT.md     mise en ligne (base hébergée, API, interface)
-tests/                  tests unitaires
+ingestion/    téléchargement des PDF, extraction, découpage, embeddings, indexation
+rag/          recherche, prompts, appel au modèle, vérification des citations
+api/          l'API FastAPI (/ask, /compare, /contrats, /stats, /health)
+app/          l'interface Streamlit
+evaluation/   les questions de test et les scripts d'évaluation
+sql/init/     le schéma de la base
+tests/        les tests
 ```
 
-## Limites et pistes
+Les PDF ne sont pas dans le dépôt (ils appartiennent aux assureurs), le script `ingestion.download` les récupère.
 
-- Seules les **conditions générales** sont analysées : les conditions particulières
-  (formule choisie, options) changent souvent la réponse. Piste : laisser l'utilisateur
-  préciser sa formule, ou téléverser ses conditions particulières.
-- Les tableaux des PDF (plafonds, franchises) sont extraits en texte brut : une extraction
-  dédiée des tableaux améliorerait les réponses chiffrées.
-- Piste : ajouter un reclassement (*reranking*) des passages avant le LLM, et mesurer son apport.
+## Ce qui reste à améliorer
+
+- Seules les conditions générales sont prises en compte. Dans la vraie vie, les conditions particulières (formule, options) changent souvent la réponse.
+- Les tableaux des PDF (plafonds, franchises) sont lus comme du texte brut, ce qui n'aide pas pour les questions sur les montants.
+- Ajouter une étape de reclassement des passages avant d'appeler le modèle.
+- Mettre l'appli en ligne (les notes sont dans `docs/DEPLOIEMENT.md`).
